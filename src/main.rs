@@ -4,9 +4,9 @@ use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Json,
     Router,
 };
@@ -24,60 +24,15 @@ struct PackageResponse {
     sha256: String,
 }
 
-#[tokio::main]
-async fn main() {
-    let db = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect("sqlite:registry.db")
-        .await
-        .unwrap();
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS packages (
-            name TEXT PRIMARY KEY,
-            description TEXT,
-            author TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        );
-        "#
-    )
-    .execute(&db)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS versions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            package_name TEXT NOT NULL,
-            version TEXT NOT NULL,
-            url TEXT NOT NULL,
-            sha256 TEXT NOT NULL,
-            published_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(package_name, version),
-            FOREIGN KEY(package_name) REFERENCES packages(name)
-        );
-        "#
-    )
-    .execute(&db)
-    .await
-    .unwrap();
-
-    let app = Router::new()
-        .route("/api", get(|| async { "CPM registry online" }))
-        .route("/api/package/*name", get(get_package))
-        .nest_service("/", ServeDir::new("public"))
-        .with_state(AppState { db });
-
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
-
-    axum::serve(listener, app)
-        .await
-        .unwrap();
-
+#[derive(Debug, serde::Deserialize)]
+struct PublishPackageRequest {
+    name: String,
+    version: String,
+    description: Option<String>,
+    author: Option<String>,
+    license: Option<String>,
+    url: String,
+    sha256: String,
 }
 
 async fn get_package(
@@ -126,4 +81,128 @@ async fn get_package(
             ).into_response()
         }
     }
+}
+
+async fn publish_package(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(pkg): Json<PublishPackageRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let expected_token = std::env::var("CPM_PUBLISH_TOKEN")
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Registry missing CPM_PUBLISH_TOKEN".to_string(),
+            )
+        })?;
+
+    let auth = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    if auth != format!("Bearer {}", expected_token) {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "Invalid publish token".to_string(),
+        ));
+    }
+
+    if pkg.name.trim().is_empty() || pkg.version.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Package name and version are required".to_string(),
+        ));
+    }
+
+    let result = sqlx::query(
+      r#"
+      INSERT INTO packages
+        (name, version, description, author, license, url, sha256)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?)
+      "#
+    )
+    .bind(&pkg.name)
+    .bind(&pkg.version)
+    .bind(&pkg.description)
+    .bind(&pkg.author)
+    .bind(&pkg.license)
+    .bind(&pkg.url)
+    .bind(&pkg.sha256)
+    .execute(&state.db)
+    .await;
+
+    match result {
+        Ok(_) => Ok(StatusCode::CREATED),
+
+        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
+            Err((
+                StatusCode::CONFLICT,
+                format!("{} v{} already exists", pkg.name, pkg.version),
+            ))
+        }
+
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )),
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let db = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect("sqlite:registry.db")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS packages (
+            name TEXT PRIMARY KEY,
+            description TEXT,
+            author TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        "#
+    )
+    .execute(&db)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            package_name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            url TEXT NOT NULL,
+            sha256 TEXT NOT NULL,
+            published_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(package_name, version),
+            FOREIGN KEY(package_name) REFERENCES packages(name)
+        );
+        "#
+    )
+    .execute(&db)
+    .await
+    .unwrap();
+
+    let app = Router::new()
+        .route("/api", get(|| async { "CPM registry online" }))
+        .route("/api/package", post(publish_package))
+        .route("/api/package/*name", get(get_package))
+        .nest_service("/", ServeDir::new("public"))
+        .with_state(AppState { db });
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .unwrap();
+
+    axum::serve(listener, app)
+        .await
+        .unwrap();
+
 }
