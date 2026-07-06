@@ -1,3 +1,7 @@
+use serde::Serialize;
+use tower_http::services::ServeDir;
+use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -6,9 +10,6 @@ use axum::{
     Json,
     Router,
 };
-
-use serde::Serialize;
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
 #[derive(Clone)]
 struct AppState {
@@ -64,7 +65,9 @@ async fn main() {
     .unwrap();
 
     let app = Router::new()
-        .route("/api/package:name", get(get_package))
+        .route("/api", get(|| async { "CPM registry online" }))
+        .route("/api/package/*name", get(get_package))
+        .nest_service("/", ServeDir::new("public"))
         .with_state(AppState { db });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
@@ -82,13 +85,15 @@ async fn get_package(
     Path(name): Path<String>,
 ) -> impl IntoResponse {
 
+    let name = name.trim_start_matches('/').to_string();
+
     let row = sqlx::query_as::<_, (String, String, String, String)>(
         r#"
         SELECT
             p.name,
             v.version,
             v.url,
-            v.sha256,
+            v.sha256
         FROM packages p
         JOIN versions v ON v.package_name = p.name
         WHERE p.name = ?
