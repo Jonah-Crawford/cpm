@@ -2,63 +2,13 @@ async function loadPackages() {
   const container = document.querySelector("div.packages");
 
   try {
-    // const res = await fetch("https://cpm.ultimatecraw.xyz/api/packages");
-    //
-    // if (!res.ok) {
-    //   throw new Error(await res.text());
-    // }
-    //
-    const packages = [
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-      {
-        name: "graphics",
-        description: "graphics, a Crawssembly package.",
-        author: "The Craw",
-        latest: "1.0.1",
-        published_at: "2026-07-07 14:49:52",
-      },
-    ];
+    const res = await fetch("https://cpm.ultimatecraw.xyz/api/packages");
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const packages = await res.json();
 
     if (packages.length === 0) {
       container.innerHTML = "<p>No packages published yet.</p>";
