@@ -1,0 +1,163 @@
+@font-face {
+  font-family: "CrawFont";
+  src: url("fonts/craw_font.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --text: #4c4f69;
+  --base: #eff1f5;
+  --mantle: #e6e9ef;
+  --crust: #dce0e8;
+  --subtext: #5c5f77;
+  --error: #d20f39;
+  --link: #1e66f5;
+  --link-color: #04a5e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #cdd6f4;
+    --base: #1e1e2e;
+    --mantle: #181825;
+    --crust: #11111b;
+    --subtext: #bac2de;
+    --error: #f38ba8;
+    --link: #89b4fa;
+    --link-color: #89dceb;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0);
+}
+
+body {
+  background-color: var(--base);
+  font-family: "Google Sans";
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+a,
+a:visited {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover,
+a:visited:hover {
+  color: var(--link-hover);
+}
+
+header {
+  width: 100%;
+  padding: 15px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  justify-items: center;
+  background-color: var(--mantle);
+  z-index: 10;
+}
+
+nav {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  justify-content: space-around;
+}
+
+div.craw-logo {
+  height: 10rem;
+  width: 40rem;
+  mask-image: url("./images/craw-logo.png");
+  mask-position: left;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: var(--text);
+}
+
+div.craw-icon {
+  height: 3rem;
+  width: 3rem;
+  mask-image: url("./images/craw-icon.png");
+  mask-position: left;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: var(--text);
+}
+
+code {
+  background-color: var(--crust);
+  border-radius: 7.5px;
+  padding: 5px;
+}
+
+main {
+  max-width: 40rem;
+  align-self: center;
+}
+
+.title {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;
+}
+
+.title code {
+  background-color: none;
+  font-size: 1.5rem;
+  padding: 5px 15px;
+}
+
+.title_text {
+  font-weight: 400;
+}
+
+.packages {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 768px) {
+  .packages {
+    grid-template-rows: auto;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.package_card {
+  padding: 24px;
+  border: 1px solid var(--crust);
+  border-radius: 18px;
+  background: var(--mantle);
+}
+
+.package_card h3 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-family: monospace;
+}
+
+.meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--subtext);
+  margin-bottom: 14px;
+}
+
+.error {
+  color: var(--error);
+}
