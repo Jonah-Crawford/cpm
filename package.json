@@ -22,6 +22,7 @@
   "homepage": "https://github.com/Jonah-Crawford/cpm#readme",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.2",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.2",
     "shadcn-ui": "^0.9.5",
     "tailwindcss": "^4.3.2"
   },
